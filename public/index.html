@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>不動産AI — チラシ解析・SNS投稿生成</title>
+<style>
+:root {
+  --bg:#0f0f0f;--bg2:#161616;--bg3:#1e1e1e;--bg4:#282828;
+  --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.14);
+  --text:#f0f0f0;--text2:#a0a0a0;--text3:#505050;
+  --gold:#c9a84c;--gold2:#e8c97a;--gold-bg:rgba(201,168,76,.12);--gold-border:rgba(201,168,76,.35);
+  --green:#4caf72;--green-bg:rgba(76,175,114,.1);
+  --red:#e05050;--blue:#5b9cf6;--blue-bg:rgba(91,156,246,.1);
+  --r:10px;--rs:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;line-height:1.6}
+
+.hdr{background:var(--bg2);border-bottom:.5px solid var(--border2);padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.logo{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px}
+.logo-icon{width:26px;height:26px;background:var(--gold);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.badge{display:flex;align-items:center;gap:5px;padding:3px 9px;background:var(--green-bg);border:.5px solid var(--green);border-radius:100px;font-size:11px;color:var(--green)}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.main{max-width:1060px;margin:0 auto;padding:24px 20px 60px}
+
+.steps{display:flex;align-items:center;margin-bottom:22px}
+.step{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text3)}
+.step.active{color:var(--text)}.step.done{color:var(--green)}
+.snum{width:20px;height:20px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.sline{flex:1;height:.5px;background:var(--border);margin:0 8px;min-width:24px}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media(max-width:680px){.grid2{grid-template-columns:1fr}}
+
+.card{background:var(--bg2);border:.5px solid var(--border);border-radius:var(--r);padding:16px 18px;margin-bottom:14px}
+.ctitle{font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+
+.upzone{border:1.5px dashed var(--border2);border-radius:var(--r);padding:36px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg2);position:relative}
+.upzone:hover,.upzone.over{border-color:var(--gold);background:var(--gold-bg)}
+.upzone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.up-icon{font-size:34px;margin-bottom:10px}
+.up-title{font-size:14px;font-weight:600;margin-bottom:4px}
+.up-sub{font-size:11px;color:var(--text2)}
+.prev-img{max-height:240px;width:100%;object-fit:contain;border-radius:var(--rs);border:.5px solid var(--border);background:var(--bg3);margin-top:12px}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:12px;font-weight:600;border-radius:var(--rs);cursor:pointer;transition:all .15s;border:.5px solid var(--border2);background:var(--bg3);color:var(--text);font-family:inherit}
+.btn:hover:not(:disabled){background:var(--bg4)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-gold{background:var(--gold);color:#0f0f0f;border-color:var(--gold);font-weight:700}
+.btn-gold:hover:not(:disabled){background:var(--gold2);border-color:var(--gold2)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-full{width:100%;justify-content:center}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+.ef{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:.5px solid var(--border)}
+.ef:last-child{border-bottom:none}
+.ef-k{font-size:11px;color:var(--text2)}
+.ef-input{background:var(--bg3);border:.5px solid var(--border2);border-radius:4px;color:var(--text);padding:3px 8px;font-size:12px;font-family:inherit;outline:none;width:200px}
+.ef-input:focus{border-color:var(--gold)}
+
+.flabel{font-size:11px;color:var(--text2);margin-bottom:4px;display:block}
+.ftextarea{width:100%;background:var(--bg3);border:.5px solid var(--border2);border-radius:var(--rs);color:var(--text);padding:8px 10px;font-size:12px;font-family:inherit;outline:none;resize:vertical;min-height:62px}
+.ftextarea:focus{border-color:var(--gold)}
+
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.chip{padding:4px 11px;border:.5px solid var(--border2);border-radius:100px;font-size:11px;cursor:pointer;background:var(--bg3);color:var(--text2);transition:all .1s}
+.chip.on{background:var(--gold-bg);border-color:var(--gold);color:var(--gold)}
+
+.status{display:flex;align-items:center;gap:9px;padding:9px 13px;border-radius:var(--rs);font-size:12px;margin:10px 0}
+.status.loading{background:var(--blue-bg);border:.5px solid var(--blue);color:var(--blue)}
+.status.ok{background:var(--green-bg);border:.5px solid var(--green);color:var(--green)}
+.status.err{background:rgba(224,80,80,.1);border:.5px solid var(--red);color:var(--red)}
+.spinner{width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+
+.tag{display:inline-flex;align-items:center;padding:2px 7px;border-radius:100px;font-size:10px;font-weight:600}
+.tag-gold{background:var(--gold-bg);border:.5px solid var(--gold-border);color:var(--gold)}
+
+.lbox{background:var(--bg3);border:.5px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:9px}
+.lhead{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;background:var(--bg4);border-bottom:.5px solid var(--border)}
+.lname{font-size:12px;font-weight:600}
+.lbody{padding:13px;font-size:12px;line-height:1.75;white-space:pre-wrap;min-height:72px;color:var(--text)}
+.lbody.dim{color:var(--text3);font-style:italic}
+
+.hr{border:none;border-top:.5px solid var(--border);margin:16px 0}
+.rscroll{max-height:560px;overflow-y:auto}
+.rscroll::-webkit-scrollbar{width:3px}
+.rscroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.placeholder{text-align:center;padding:52px 20px;color:var(--text3)}
+.placeholder .big{font-size:32px;margin-bottom:10px}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--green);color:#0f0f0f;font-size:12px;font-weight:600;padding:9px 18px;border-radius:100px;transition:transform .3s;z-index:999}
+.toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo">
+    <div class="logo-icon">🏠</div>
+    不動産AI <span style="color:var(--text2);font-weight:400;font-size:12px;margin-left:4px;">SNS投稿システム</span>
+  </div>
+  <div class="badge"><div class="dot"></div>Claude API 接続済み</div>
+</div>
+
+<div class="main">
+  <div class="steps">
+    <div class="step active" id="s1"><div class="snum">1</div><span>チラシアップロード</span></div>
+    <div class="sline"></div>
+    <div class="step" id="s2"><div class="snum">2</div><span>AI解析</span></div>
+    <div class="sline"></div>
+    <div class="step" id="s3"><div class="snum">3</div><span>紹介文生成</span></div>
+    <div class="sline"></div>
+    <div class="step" id="s4"><div class="snum">4</div><span>Notion保存</span></div>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <div class="ctitle">📎 チラシをアップロード</div>
+        <div class="upzone" id="upzone">
+          <input type="file" id="fileInput" accept="image/*,application/pdf">
+          <div class="up-icon">📄</div>
+          <div class="up-title">画像またはPDFをドロップ</div>
+          <div class="up-sub">JPG / PNG / PDF · 最大20MB</div>
+        </div>
+        <div id="prevWrap" style="display:none">
+          <img id="prevImg" class="prev-img" src="" alt="">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:7px">
+            <span id="fname" style="font-size:11px;color:var(--text2)"></span>
+            <button class="btn btn-sm" onclick="clearFile()">✕ クリア</button>
+          </div>
+        </div>
+        <button class="btn btn-gold btn-full" id="analyzeBtn" onclick="analyzeFlyer()" disabled style="margin-top:12px">✨ AIでチラシを解析する</button>
+        <div id="analyzeStatus"></div>
+      </div>
+
+      <div class="card" id="extractCard" style="display:none">
+        <div class="ctitle">🏠 抽出された物件情報 <span class="tag tag-gold" style="margin-left:auto">編集可能</span></div>
+        <div id="extractedFields"></div>
+        <div class="hr"></div>
+        <div style="margin-bottom:10px">
+          <label class="flabel">セールスポイント・備考</label>
+          <textarea class="ftextarea" id="extraNotes" placeholder="例：リノベーション済み、ペット可、眺望抜群など"></textarea>
+        </div>
+        <div style="margin-bottom:10px">
+          <label class="flabel">ターゲット・トーン</label>
+          <div class="chips" id="toneChips">
+            <div class="chip on" onclick="this.classList.toggle('on')">富裕層向け</div>
+            <div class="chip" onclick="this.classList.toggle('on')">投資家向け</div>
+            <div class="chip" onclick="this.classList.toggle('on')">ファミリー向け</div>
+            <div class="chip" onclick="this.classList.toggle('on')">海外富裕層</div>
+            <div class="chip" onclick="this.classList.toggle('on')">カジュアル</div>
+          </div>
+        </div>
+        <div style="margin-bottom:12px">
+          <label class="flabel">投稿先SNS</label>
+          <div class="chips" id="snsChips">
+            <div class="chip on" onclick="this.classList.toggle('on')">Instagram</div>
+            <div class="chip on" onclick="this.classList.toggle('on')">WeChat</div>
+            <div class="chip" onclick="this.classList.toggle('on')">LINE</div>
+            <div class="chip" onclick="this.classList.toggle('on')">Facebook</div>
+            <div class="chip" onclick="this.classList.toggle('on')">X（Twitter）</div>
+          </div>
+        </div>
+        <button class="btn btn-gold btn-full" id="genBtn" onclick="generatePosts()">🌏 3言語で紹介文を生成する</button>
+        <div id="genStatus"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="ctitle">📢 生成された紹介文</div>
+        <div class="placeholder" id="postPlaceholder">
+          <div class="big">🌏</div>
+          <div style="font-size:12px">チラシを解析すると<br>日本語・中国語・英語の紹介文が生成されます</div>
+        </div>
+        <div id="postResult" style="display:none">
+          <div class="rscroll">
+            <div class="lbox">
+              <div class="lhead"><span class="lname">🇯🇵 日本語</span><button class="btn btn-sm" onclick="cp('ja')">📋 コピー</button></div>
+              <div class="lbody dim" id="post-ja">生成待ち...</div>
+            </div>
+            <div class="lbox">
+              <div class="lhead"><span class="lname">🇨🇳 中文（简体）</span><button class="btn btn-sm" onclick="cp('zh')">📋 コピー</button></div>
+              <div class="lbody dim" id="post-zh">生成待ち...</div>
+            </div>
+            <div class="lbox">
+              <div class="lhead"><span class="lname">🇺🇸 English</span><button class="btn btn-sm" onclick="cp('en')">📋 コピー</button></div>
+              <div class="lbody dim" id="post-en">生成待ち...</div>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn" onclick="cpAll()" style="flex:1;justify-content:center">📋 全言語コピー</button>
+            <button class="btn btn-gold" id="notionBtn" onclick="saveToNotion()" style="flex:1;justify-content:center">⬆️ Notionへ保存</button>
+          </div>
+          <div id="notionStatus"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let fileData=null,fileType=null,extracted={};
+
+// ── File ──
+const fi=document.getElementById('fileInput');
+fi.addEventListener('change',e=>loadFile(e.target.files[0]));
+const uz=document.getElementById('upzone');
+uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('over')});
+uz.addEventListener('dragleave',()=>uz.classList.remove('over'));
+uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('over');loadFile(e.dataTransfer.files[0])});
+
+function loadFile(f){
+  if(!f)return;
+  fileType=f.type;
+  const r=new FileReader();
+  r.onload=ev=>{
+    fileData=ev.target.result.split(',')[1];
+    document.getElementById('fname').textContent=f.name+' ('+(f.size/1024).toFixed(0)+'KB)';
+    if(f.type.startsWith('image/')){document.getElementById('prevImg').src=ev.target.result;document.getElementById('prevWrap').style.display='block';}
+    else{document.getElementById('prevImg').style.display='none';document.getElementById('prevWrap').style.display='block';}
+    document.getElementById('analyzeBtn').disabled=false;
+  };
+  r.readAsDataURL(f);
+}
+function clearFile(){
+  fileData=null;fileType=null;fi.value='';
+  document.getElementById('prevWrap').style.display='none';
+  document.getElementById('prevImg').src='';
+  document.getElementById('analyzeBtn').disabled=true;
+  document.getElementById('extractCard').style.display='none';
+  document.getElementById('analyzeStatus').innerHTML='';
+  setStep(1);
+}
+
+// ── Steps ──
+function setStep(n){
+  for(let i=1;i<=4;i++){
+    const el=document.getElementById('s'+i);
+    el.className='step'+(i<n?' done':i===n?' active':'');
+    el.querySelector('.snum').textContent=i<n?'✓':i;
+  }
+}
+
+// ── Chips ──
+function chips(id){return[...document.querySelectorAll('#'+id+' .chip.on')].map(c=>c.textContent).join('、')}
+
+// ── API call (to our backend) ──
+async function api(path,body){
+  const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d=await r.json();
+  if(!r.ok||d.error) throw new Error(d.error||'サーバーエラー');
+  return d;
+}
+
+// ── Analyze ──
+async function analyzeFlyer(){
+  if(!fileData)return;
+  setStep(2);
+  const btn=document.getElementById('analyzeBtn');
+  btn.disabled=true;btn.textContent='解析中...';
+  setStatus('analyzeStatus','loading','AIがチラシを解析しています...');
+  try{
+    const {data}=await api('/api/analyze',{fileData,fileType});
+    extracted=data;
+    renderFields(data);
+    const count=Object.values(data).filter(v=>v).length;
+    setStatus('analyzeStatus','ok','✓ 解析完了 — '+count+'項目を抽出しました');
+    document.getElementById('extractCard').style.display='block';
+    setStep(3);
+  }catch(e){
+    setStatus('analyzeStatus','err','⚠ '+e.message);setStep(1);
+  }finally{
+    btn.disabled=false;btn.textContent='✨ AIでチラシを解析する';
+  }
+}
+
+function renderFields(data){
+  const keys={'物件名':'物件名','価格':'価格','所在地':'所在地','エリア':'エリア','間取り':'間取り','面積':'面積（㎡）','築年数':'築年数','階数':'階数','最寄り駅':'最寄り駅','駅徒歩分':'駅徒歩（分）','向き':'向き','管理費':'管理費/月','修繕積立金':'修繕積立金','駐車場':'駐車場','取引形態':'取引形態','その他特徴':'その他特徴'};
+  const c=document.getElementById('extractedFields');c.innerHTML='';
+  for(const[k,label]of Object.entries(keys)){
+    const v=data[k]||'';
+    const row=document.createElement('div');row.className='ef';
+    row.innerHTML=`<span class="ef-k">${label}</span><input class="ef-input" type="text" value="${esc(v)}" oninput="extracted['${k}']=this.value" placeholder="—">`;
+    c.appendChild(row);
+  }
+}
+
+// ── Generate ──
+async function generatePosts(){
+  setStep(3);
+  const btn=document.getElementById('genBtn');
+  btn.disabled=true;btn.textContent='生成中...';
+  setStatus('genStatus','loading','3言語の紹介文を生成しています...');
+  document.getElementById('postPlaceholder').style.display='none';
+  document.getElementById('postResult').style.display='block';
+  ['ja','zh','en'].forEach(l=>{const el=document.getElementById('post-'+l);el.className='lbody dim';el.textContent='生成中...';});
+  try{
+    const {posts}=await api('/api/generate',{
+      extracted,
+      tone:chips('toneChips')||'プロフェッショナル',
+      sns:chips('snsChips')||'Instagram',
+      notes:document.getElementById('extraNotes').value
+    });
+    ['ja','zh','en'].forEach(l=>{
+      const el=document.getElementById('post-'+l);
+      el.className='lbody';el.textContent=posts[l]||'（生成に失敗しました）';
+    });
+    setStatus('genStatus','ok','✓ 3言語の紹介文を生成しました');
+    setStep(4);
+  }catch(e){
+    setStatus('genStatus','err','⚠ '+e.message);
+    ['ja','zh','en'].forEach(l=>{document.getElementById('post-'+l).textContent='エラーが発生しました';});
+  }finally{
+    btn.disabled=false;btn.textContent='🌏 3言語で紹介文を生成する';
+  }
+}
+
+// ── Notion ──
+async function saveToNotion(){
+  const btn=document.getElementById('notionBtn');
+  btn.disabled=true;btn.textContent='保存中...';
+  setStatus('notionStatus','loading','Notionのデータベースへ保存しています...');
+  try{
+    const posts={
+      ja:document.getElementById('post-ja').textContent,
+      zh:document.getElementById('post-zh').textContent,
+      en:document.getElementById('post-en').textContent
+    };
+    const {pageId,url}=await api('/api/notion',{extracted,posts,notes:document.getElementById('extraNotes').value});
+    setStatus('notionStatus','ok','✓ Notionへ保存しました！');
+    document.getElementById('notionStatus').innerHTML+=`
+      <div style="margin-top:6px;font-size:11px;color:var(--text2)">
+        <a href="${esc(url)}" target="_blank" style="color:var(--gold)">→ Notionで確認する (${pageId.slice(0,8)}...)</a>
+      </div>`;
+  }catch(e){
+    setStatus('notionStatus','err','⚠ '+e.message);
+  }finally{
+    btn.disabled=false;btn.textContent='⬆️ Notionへ保存';
+  }
+}
+
+// ── Utils ──
+function setStatus(id,type,msg){
+  const el=document.getElementById(id);if(!el)return;
+  if(!msg){el.innerHTML='';return;}
+  const icon=type==='loading'?'<div class="spinner"></div>':type==='ok'?'✓':'⚠';
+  el.innerHTML=`<div class="status ${type==='ok'?'ok':type==='err'?'err':'loading'}">${icon} ${esc(msg)}</div>`;
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function cp(lang){navigator.clipboard.writeText(document.getElementById('post-'+lang).textContent).then(()=>toast('コピーしました ✅'))}
+function cpAll(){
+  const t=['ja','zh','en'].map(l=>`【${{ja:'日本語',zh:'中文',en:'English'}[l]}】\n${document.getElementById('post-'+l).textContent}`).join('\n\n');
+  navigator.clipboard.writeText(t).then(()=>toast('全言語をコピーしました ✅'));
+}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+
+setStep(1);
+</script>
+</body>
+</html>
